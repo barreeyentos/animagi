@@ -21,12 +21,19 @@ dst must be settable or an error will be returned
 */
 func Transform(src, dst interface{}) (err error) {
 
-	if reflect.ValueOf(dst).Kind() != reflect.Ptr || !reflect.ValueOf(dst).Elem().CanSet() {
+	typeOfSrc := reflect.TypeOf(src)
+	typeOfDst := reflect.TypeOf(dst)
+	valueOfSrc := reflect.ValueOf(src)
+	valueOfDst := reflect.ValueOf(dst)
+
+	if valueOfDst.Kind() != reflect.Ptr || !valueOfDst.Elem().CanSet() {
 		return errors.New(dstError)
 	}
 
-	if reflect.PtrTo(reflect.TypeOf(src)) == reflect.TypeOf(dst) {
-		reflect.ValueOf(dst).Elem().Set(reflect.ValueOf(src))
+	if reflect.PtrTo(typeOfSrc) == typeOfDst {
+		reflect.ValueOf(dst).Elem().Set(valueOfSrc)
+	} else if valueOfDst.Elem().Kind() == valueOfSrc.Kind() {
+		reflect.ValueOf(dst).Elem().Set(valueOfSrc.Convert(valueOfDst.Elem().Type()))
 	} else {
 		err = errors.New(unsupportedTransformation)
 	}

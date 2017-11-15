@@ -17,6 +17,8 @@ type MyTestStruct struct {
 	aSimpleStruct MySimpleStruct
 }
 
+type MyInt32Kind int32
+
 var _ = Describe("Animagi", func() {
 
 	Context("Unsettable destinations", func() {
@@ -165,6 +167,24 @@ var _ = Describe("Animagi", func() {
 			var dst MyTestStruct
 			_ = Transform(src, &dst)
 			Expect(dst).To(Equal(src))
+			Expect(&dst).NotTo(BeIdenticalTo(&src))
+		})
+	})
+
+	Context("Types are same Kind", func() {
+		It("Should copy kind of int", func() {
+			var src MyInt32Kind = 332
+			var dst int32
+			_ = Transform(src, &dst)
+			Expect(dst).To(BeEquivalentTo(src))
+			Expect(&dst).NotTo(BeIdenticalTo(&src))
+		})
+
+		It("Should copy kind of MyInt32Kind", func() {
+			var src int32 = 332
+			var dst MyInt32Kind
+			_ = Transform(src, &dst)
+			Expect(dst).To(BeEquivalentTo(src))
 			Expect(&dst).NotTo(BeIdenticalTo(&src))
 		})
 	})
