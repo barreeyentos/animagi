@@ -2,7 +2,6 @@ package animagi
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 )
 
@@ -63,7 +62,6 @@ func inspectDestination(dst interface{}) map[string]reflect.Type {
 			switch reflect.Indirect(field).Kind() {
 			case reflect.Struct:
 				subDescription := inspectDestination(field)
-				fmt.Println("subDesc:", subDescription)
 				for k, v := range subDescription {
 					dstDescription[fieldName+"."+k] = v
 				}

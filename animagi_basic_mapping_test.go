@@ -1,8 +1,6 @@
 package animagi_test
 
 import (
-	"fmt"
-
 	"github.com/barreeyentos/animagi"
 
 	. "github.com/onsi/ginkgo"
@@ -76,7 +74,6 @@ var _ = Describe("AnimagiBasicMapping", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dst).NotTo(BeEquivalentTo(src))
 
-			fmt.Println("src:", src, "dst:", dst)
 			Expect(dst.Description).To(Equal(src.Description))
 			Expect(dst.ExtraDescription).To(BeEmpty())
 			Expect(dst.SameSingleDepth.T_extra).To(Equal(src.SameSingleDepth.T_extra))
