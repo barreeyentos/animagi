@@ -2,6 +2,7 @@ package animagi
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -31,11 +32,85 @@ func Transform(src, dst interface{}) (err error) {
 	}
 
 	if reflect.PtrTo(typeOfSrc) == typeOfDst {
-		reflect.ValueOf(dst).Elem().Set(valueOfSrc)
+		valueOfDst.Elem().Set(valueOfSrc)
 	} else if valueOfDst.Elem().Kind() == valueOfSrc.Kind() {
-		reflect.ValueOf(dst).Elem().Set(valueOfSrc.Convert(valueOfDst.Elem().Type()))
+		if valueOfSrc.Kind() != reflect.Struct {
+			valueOfDst.Elem().Set(valueOfSrc.Convert(valueOfDst.Elem().Type()))
+		} else {
+			dstDescription := inspectDestination(dst)
+			mapToDestination("", src, dst, dstDescription)
+		}
 	} else {
 		err = errors.New(unsupportedTransformation)
 	}
 	return err
+}
+
+func inspectDestination(dst interface{}) map[string]reflect.Type {
+	dstDescription := make(map[string]reflect.Type)
+	var dstValue reflect.Value
+
+	if reflect.TypeOf(dst) != reflect.TypeOf(dstValue) {
+		dstValue = reflect.Indirect(reflect.ValueOf(dst))
+	} else {
+		dstValue = dst.(reflect.Value)
+	}
+
+	for i := 0; i < dstValue.NumField(); i++ {
+		field := dstValue.Field(i)
+		if field.CanSet() {
+			fieldName := dstValue.Type().Field(i).Name
+			switch reflect.Indirect(field).Kind() {
+			case reflect.Struct:
+				subDescription := inspectDestination(field)
+				fmt.Println("subDesc:", subDescription)
+				for k, v := range subDescription {
+					dstDescription[fieldName+"."+k] = v
+				}
+			default:
+				dstDescription[fieldName] = field.Type()
+			}
+		}
+	}
+	return dstDescription
+}
+
+func mapToDestination(currentLevel string, src, dst interface{}, dstDescription map[string]reflect.Type) {
+	var srcValue reflect.Value
+
+	var dstValue reflect.Value
+
+	if reflect.TypeOf(dst) != reflect.TypeOf(dstValue) {
+		dstValue = reflect.Indirect(reflect.ValueOf(dst))
+	} else {
+		dstValue = dst.(reflect.Value)
+	}
+	if reflect.TypeOf(src) != reflect.TypeOf(srcValue) {
+		srcValue = reflect.Indirect(reflect.ValueOf(src))
+	} else {
+		srcValue = src.(reflect.Value)
+	}
+
+	for i := 0; i < srcValue.NumField(); i++ {
+		field := srcValue.Field(i)
+		fieldName := srcValue.Type().Field(i).Name
+		var fullPathName string
+		if len(currentLevel) != 0 {
+			fullPathName = currentLevel + "." + fieldName
+		} else {
+			fullPathName = fieldName
+		}
+		switch reflect.Indirect(field).Kind() {
+		case reflect.Struct:
+			if dstValue.FieldByName(fieldName).IsValid() {
+				mapToDestination(fullPathName, field, dstValue.FieldByName(fieldName), dstDescription)
+			}
+		default:
+			if dstDescription[fullPathName] != nil && dstValue.CanSet() {
+				if dstValue.FieldByName(fieldName).CanSet() {
+					dstValue.FieldByName(fieldName).Set(field)
+				}
+			}
+		}
+	}
 }
