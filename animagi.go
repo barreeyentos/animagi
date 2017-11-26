@@ -83,6 +83,7 @@ func mapToDestination(currentLevel string, src, dst interface{}, dstDescription 
 	} else {
 		dstValue = dst.(reflect.Value)
 	}
+
 	if reflect.TypeOf(src) != reflect.TypeOf(srcValue) {
 		srcValue = reflect.Indirect(reflect.ValueOf(src))
 	} else {
@@ -106,7 +107,11 @@ func mapToDestination(currentLevel string, src, dst interface{}, dstDescription 
 		default:
 			if dstDescription[fullPathName] != nil && dstValue.CanSet() {
 				if dstValue.FieldByName(fieldName).CanSet() {
-					dstValue.FieldByName(fieldName).Set(field)
+					if reflect.Indirect(field).Type() == dstValue.FieldByName(fieldName).Type() {
+						dstValue.FieldByName(fieldName).Set(field)
+					} else {
+						dstValue.FieldByName(fieldName).Set(field.Convert(dstValue.FieldByName(fieldName).Type()))
+					}
 				}
 			}
 		}

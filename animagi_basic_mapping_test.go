@@ -39,9 +39,10 @@ type SimpleWithDepthOfTwo struct {
 	SameSingleDepth TheSameSimpleSingleDepth
 }
 type TheSameSimpleWithDepthOfTwo struct {
-	Description      string
-	ExtraDescription string
-	SameSingleDepth  TheSameSimpleSingleDepth
+	Description           string
+	ExtraDescription      string
+	SameSingleDepth       TheSameSimpleSingleDepth
+	SameTypeDifferentName TheSameSimpleSingleDepth
 }
 
 var _ = Describe("AnimagiBasicMapping", func() {
@@ -64,6 +65,23 @@ var _ = Describe("AnimagiBasicMapping", func() {
 			Expect(dst.T_mystring).To(Equal(src.T_mystring))
 
 		})
+
+		It("Should Map Structs with Fields of Same Kind", func() {
+			src := struct {
+				A int
+				B mystring
+			}{420, "i'm a string"}
+			var dst struct {
+				A myint
+				B string
+			}
+
+			err := animagi.Transform(src, &dst)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dst.A).To(BeNumerically("==", src.A))
+			Expect(dst.B).To(BeEquivalentTo(src.B))
+
+		})
 	})
 
 	Context("Depth of Two Structs", func() {
@@ -76,6 +94,7 @@ var _ = Describe("AnimagiBasicMapping", func() {
 
 			Expect(dst.Description).To(Equal(src.Description))
 			Expect(dst.ExtraDescription).To(BeEmpty())
+
 			Expect(dst.SameSingleDepth.T_extra).To(Equal(src.SameSingleDepth.T_extra))
 			Expect(dst.SameSingleDepth.T_extraInt).To(Equal(src.SameSingleDepth.T_extraInt))
 			Expect(dst.SameSingleDepth.T_int).To(Equal(src.SameSingleDepth.T_int))
@@ -84,6 +103,15 @@ var _ = Describe("AnimagiBasicMapping", func() {
 			Expect(dst.SameSingleDepth.T_int32).To(Equal(src.SameSingleDepth.T_int32))
 			Expect(dst.SameSingleDepth.T_string).To(Equal(src.SameSingleDepth.T_string))
 			Expect(dst.SameSingleDepth.T_mystring).To(Equal(src.SameSingleDepth.T_mystring))
+
+			Expect(dst.SameTypeDifferentName.T_extra).To(BeZero())
+			Expect(dst.SameTypeDifferentName.T_extraInt).To(BeZero())
+			Expect(dst.SameTypeDifferentName.T_int).To(BeZero())
+			Expect(dst.SameTypeDifferentName.T_int8).To(BeZero())
+			Expect(dst.SameTypeDifferentName.T_int16).To(BeZero())
+			Expect(dst.SameTypeDifferentName.T_int32).To(BeZero())
+			Expect(dst.SameTypeDifferentName.T_string).To(BeEmpty())
+			Expect(dst.SameTypeDifferentName.T_mystring).To(BeEmpty())
 
 		})
 	})
