@@ -70,16 +70,19 @@ var _ = Describe("AnimagiBasicMapping", func() {
 			src := struct {
 				A int
 				B mystring
-			}{420, "i'm a string"}
+				C string
+			}{420, "a string", "just another string"}
 			var dst struct {
 				A myint
 				B string
+				D uint8
 			}
 
 			err := animagi.Transform(src, &dst)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dst.A).To(BeNumerically("==", src.A))
 			Expect(dst.B).To(BeEquivalentTo(src.B))
+			Expect(dst.D).To(BeZero())
 
 		})
 	})
