@@ -68,24 +68,32 @@ func describeStructure(structure interface{}) map[string]reflect.Type {
 func mapToDestination(currentLevel string, src, dst interface{}, srcDescription map[string]reflect.Type) {
 	srcValue := findValueOf(src)
 	dstValue := findValueOf(dst)
-
 	for i := 0; i < dstValue.NumField(); i++ {
 		field := dstValue.Field(i)
 		fieldName := dstValue.Type().Field(i).Name
 		fullPathName := appendFieldName(currentLevel, fieldName)
-
-		switch reflect.Indirect(field).Kind() {
+		switch field.Kind() {
 		case reflect.Struct:
 			if srcValue.FieldByName(fieldName).IsValid() {
 				mapToDestination(fullPathName, srcValue.FieldByName(fieldName), field, srcDescription)
 			}
+		case reflect.Ptr:
+			if srcDescription[fullPathName] != nil && field.CanSet() {
+				srcFieldValue := srcValue.FieldByName(fieldName)
+				field.Set(reflect.New(reflect.TypeOf(field.Interface()).Elem()))
+				if reflect.Indirect(field).Type() == reflect.Indirect(srcFieldValue).Type() {
+					field.Elem().Set(reflect.Indirect(srcFieldValue))
+				} else if srcFieldValue.Type().ConvertibleTo(reflect.Indirect(field).Type()) {
+					field.Elem().Set(srcFieldValue.Convert(reflect.Indirect(field).Type()))
+				}
+			}
 		default:
 			if srcDescription[fullPathName] != nil && field.CanSet() {
 				srcFieldValue := srcValue.FieldByName(fieldName)
-				if reflect.Indirect(field).Type() == srcFieldValue.Type() {
-					field.Set(srcFieldValue)
-				} else if srcFieldValue.Type().ConvertibleTo(reflect.Indirect(field).Type()) {
-					field.Set(srcFieldValue.Convert(reflect.Indirect(field).Type()))
+				if field.Type() == reflect.Indirect(srcFieldValue).Type() {
+					field.Set(reflect.Indirect(srcFieldValue))
+				} else if reflect.Indirect(srcFieldValue).Type().ConvertibleTo(reflect.Indirect(field).Type()) {
+					field.Set(reflect.Indirect(srcFieldValue).Convert(reflect.Indirect(field).Type()))
 				}
 			}
 		}
