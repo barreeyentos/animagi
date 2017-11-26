@@ -36,8 +36,8 @@ func Transform(src, dst interface{}) (err error) {
 		if valueOfSrc.Kind() != reflect.Struct {
 			valueOfDst.Elem().Set(valueOfSrc.Convert(valueOfDst.Elem().Type()))
 		} else {
-			dstDescription := inspectDestination(dst)
-			mapToDestination("", src, dst, dstDescription)
+			srcDescription := describeStructure(src)
+			mapToDestination("", src, dst, srcDescription)
 		}
 	} else {
 		err = errors.New(unsupportedTransformation)
@@ -45,75 +45,67 @@ func Transform(src, dst interface{}) (err error) {
 	return err
 }
 
-func inspectDestination(dst interface{}) map[string]reflect.Type {
-	dstDescription := make(map[string]reflect.Type)
-	var dstValue reflect.Value
+func describeStructure(structure interface{}) map[string]reflect.Type {
+	structureDescription := make(map[string]reflect.Type)
+	structureValue := findValueOf(structure)
 
-	if reflect.TypeOf(dst) != reflect.TypeOf(dstValue) {
-		dstValue = reflect.Indirect(reflect.ValueOf(dst))
-	} else {
-		dstValue = dst.(reflect.Value)
+	for i := 0; i < structureValue.NumField(); i++ {
+		field := structureValue.Field(i)
+		fieldName := structureValue.Type().Field(i).Name
+		switch reflect.Indirect(field).Kind() {
+		case reflect.Struct:
+			subDescription := describeStructure(field)
+			for k, v := range subDescription {
+				structureDescription[fieldName+"."+k] = v
+			}
+		default:
+			structureDescription[fieldName] = field.Type()
+		}
 	}
+	return structureDescription
+}
+
+func mapToDestination(currentLevel string, src, dst interface{}, srcDescription map[string]reflect.Type) {
+	srcValue := findValueOf(src)
+	dstValue := findValueOf(dst)
 
 	for i := 0; i < dstValue.NumField(); i++ {
 		field := dstValue.Field(i)
-		if field.CanSet() {
-			fieldName := dstValue.Type().Field(i).Name
-			switch reflect.Indirect(field).Kind() {
-			case reflect.Struct:
-				subDescription := inspectDestination(field)
-				for k, v := range subDescription {
-					dstDescription[fieldName+"."+k] = v
-				}
-			default:
-				dstDescription[fieldName] = field.Type()
-			}
-		}
-	}
-	return dstDescription
-}
+		fieldName := dstValue.Type().Field(i).Name
+		fullPathName := appendFieldName(currentLevel, fieldName)
 
-func mapToDestination(currentLevel string, src, dst interface{}, dstDescription map[string]reflect.Type) {
-	var srcValue reflect.Value
-
-	var dstValue reflect.Value
-
-	if reflect.TypeOf(dst) != reflect.TypeOf(dstValue) {
-		dstValue = reflect.Indirect(reflect.ValueOf(dst))
-	} else {
-		dstValue = dst.(reflect.Value)
-	}
-
-	if reflect.TypeOf(src) != reflect.TypeOf(srcValue) {
-		srcValue = reflect.Indirect(reflect.ValueOf(src))
-	} else {
-		srcValue = src.(reflect.Value)
-	}
-
-	for i := 0; i < srcValue.NumField(); i++ {
-		field := srcValue.Field(i)
-		fieldName := srcValue.Type().Field(i).Name
-		var fullPathName string
-		if len(currentLevel) != 0 {
-			fullPathName = currentLevel + "." + fieldName
-		} else {
-			fullPathName = fieldName
-		}
 		switch reflect.Indirect(field).Kind() {
 		case reflect.Struct:
-			if dstValue.FieldByName(fieldName).IsValid() {
-				mapToDestination(fullPathName, field, dstValue.FieldByName(fieldName), dstDescription)
+			if srcValue.FieldByName(fieldName).IsValid() {
+				mapToDestination(fullPathName, srcValue.FieldByName(fieldName), field, srcDescription)
 			}
 		default:
-			if dstDescription[fullPathName] != nil && dstValue.CanSet() {
-				if dstValue.FieldByName(fieldName).CanSet() {
-					if reflect.Indirect(field).Type() == dstValue.FieldByName(fieldName).Type() {
-						dstValue.FieldByName(fieldName).Set(field)
-					} else {
-						dstValue.FieldByName(fieldName).Set(field.Convert(dstValue.FieldByName(fieldName).Type()))
-					}
+			if srcDescription[fullPathName] != nil && field.CanSet() {
+				srcFieldValue := srcValue.FieldByName(fieldName)
+				if reflect.Indirect(field).Type() == srcFieldValue.Type() {
+					field.Set(srcFieldValue)
+				} else if srcFieldValue.Type().ConvertibleTo(reflect.Indirect(field).Type()) {
+					field.Set(srcFieldValue.Convert(reflect.Indirect(field).Type()))
 				}
 			}
 		}
 	}
+}
+
+func findValueOf(val interface{}) (valueOf reflect.Value) {
+	if reflect.TypeOf(val) != reflect.TypeOf(valueOf) {
+		valueOf = reflect.Indirect(reflect.ValueOf(val))
+	} else {
+		valueOf = val.(reflect.Value)
+	}
+	return valueOf
+}
+
+func appendFieldName(prefix, fieldName string) (fullName string) {
+	if len(prefix) != 0 {
+		fullName = prefix + "." + fieldName
+	} else {
+		fullName = fieldName
+	}
+	return fullName
 }
