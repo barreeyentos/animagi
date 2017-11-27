@@ -83,8 +83,8 @@ func mapToDestination(currentLevel string, src, dst interface{}, srcDescription 
 				field.Set(reflect.New(reflect.TypeOf(field.Interface()).Elem()))
 				if reflect.Indirect(field).Type() == reflect.Indirect(srcFieldValue).Type() {
 					field.Elem().Set(reflect.Indirect(srcFieldValue))
-				} else if srcFieldValue.Type().ConvertibleTo(reflect.Indirect(field).Type()) {
-					field.Elem().Set(srcFieldValue.Convert(reflect.Indirect(field).Type()))
+				} else if reflect.Indirect(srcFieldValue).Type().ConvertibleTo(reflect.Indirect(field).Type()) {
+					field.Elem().Set(reflect.Indirect(srcFieldValue).Convert(reflect.Indirect(field).Type()))
 				}
 			}
 		default:

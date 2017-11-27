@@ -172,8 +172,8 @@ var _ = Describe("AnimagiBasicMapping", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(*dst.MyI).To(BeNumerically("==", *src.MyI))
 			Expect(*dst.I).To(BeNumerically("==", src.I))
-			Expect(*dst.MyS).To(Equal(*src.MyS))
-			Expect(dst.S).To(Equal(*src.S))
+			Expect(*dst.MyS).To(BeEquivalentTo(*src.MyS))
+			Expect(dst.S).To(BeEquivalentTo(*src.S))
 		})
 	})
 
