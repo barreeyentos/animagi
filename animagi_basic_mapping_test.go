@@ -85,6 +85,96 @@ var _ = Describe("AnimagiBasicMapping", func() {
 			Expect(dst.D).To(BeZero())
 
 		})
+
+		It("Should Map Structs with Pointers of same Type", func() {
+			src := struct {
+				Iptr *int
+				Sptr *string
+			}{new(int), new(string)}
+			*src.Iptr = 33
+			*src.Sptr = "point to me"
+
+			var dst struct {
+				Iptr  *int
+				Sptr  *string
+				extra int
+			}
+
+			err := animagi.Transform(src, &dst)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(dst.Iptr).ToNot(BeIdenticalTo(src.Iptr))
+			Expect(*dst.Iptr).To(Equal(*src.Iptr))
+			Expect(dst.Sptr).ToNot(BeIdenticalTo(src.Sptr))
+			Expect(*dst.Sptr).To(Equal(*src.Sptr))
+		})
+
+		It("Should Map literals to pointer", func() {
+			src := struct {
+				I int
+				S string
+			}{32, "not pointy"}
+
+			var dst struct {
+				I *int
+				S *string
+			}
+
+			err := animagi.Transform(src, &dst)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*dst.I).To(BeNumerically("==", src.I))
+			Expect(*dst.S).To(Equal(src.S))
+
+		})
+
+		It("Should Map pointers to literals", func() {
+			src := struct {
+				I *int
+				S *string
+			}{new(int), new(string)}
+			*src.I = 31
+			*src.S = "pointy str"
+
+			var dst struct {
+				I int
+				S string
+			}
+
+			err := animagi.Transform(src, &dst)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(dst.I).To(BeNumerically("==", *src.I))
+			Expect(dst.S).To(Equal(*src.S))
+
+		})
+
+		It("Should map pointer fields whose base kind are the same", func() {
+			src := struct {
+				MyI *myint
+				MyS *mystring
+				I   myint
+				S   *mystring
+			}{new(myint), new(mystring), 2, new(mystring)}
+			*src.MyI = 31
+			*src.MyS = "pointy str"
+			*src.S = "pointy redux"
+
+			var dst struct {
+				MyI *int
+				MyS *string
+				I   *int
+				S   string
+			}
+
+			err := animagi.Transform(src, &dst)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*dst.MyI).To(BeNumerically("==", *src.MyI))
+			Expect(*dst.I).To(BeNumerically("==", src.I))
+			Expect(*dst.MyS).To(BeEquivalentTo(*src.MyS))
+			Expect(dst.S).To(BeEquivalentTo(*src.S))
+		})
 	})
 
 	Context("Depth of Two Structs", func() {
