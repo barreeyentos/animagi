@@ -5,6 +5,11 @@ A smart object mapper for Golang structures.
 ## Feature list
 - handles copy of same Types and aliased Types
 - handles nested structures
+- handles pointers
+    - primitive types to pointer of the same type (new memory allocated for pointer): int -> *int
+    - pointer of primitive to the primitive type: *string -> string
+    - pointer of primitive to pointer of primitive (deep copy, new memory allocated): *uint -> *uint
+    - all of the above where the types are aliased: myint -> *int or *mystring -> string, etc.
 
 ## Usage
 
