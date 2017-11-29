@@ -21,27 +21,23 @@ dst must be settable or an error will be returned
 */
 func Transform(src, dst interface{}) (err error) {
 
-	typeOfSrc := reflect.TypeOf(src)
-	typeOfDst := reflect.TypeOf(dst)
-	valueOfSrc := reflect.ValueOf(src)
-	valueOfDst := reflect.ValueOf(dst)
-
-	if valueOfDst.Kind() != reflect.Ptr || !valueOfDst.Elem().CanSet() {
+	if reflect.ValueOf(dst).Kind() != reflect.Ptr || !reflect.ValueOf(dst).Elem().CanSet() {
 		return errors.New(dstError)
 	}
-
-	if reflect.PtrTo(typeOfSrc) == typeOfDst {
-		valueOfDst.Elem().Set(valueOfSrc)
-	} else if valueOfDst.Elem().Kind() == valueOfSrc.Kind() {
-		if valueOfSrc.Kind() != reflect.Struct {
-			valueOfDst.Elem().Set(valueOfSrc.Convert(valueOfDst.Elem().Type()))
-		} else {
+	valueOfSrc := findValueOf(src)
+	valueOfDst := findValueOf(dst)
+	if valueOfSrc.Kind() == valueOfDst.Kind() {
+		switch valueOfDst.Kind() {
+		case reflect.Struct:
 			srcDescription := describeStructure(src)
 			mapToDestination("", src, dst, srcDescription)
+		default:
+			setValueOfDst(valueOfDst, valueOfSrc)
 		}
 	} else {
 		err = errors.New(unsupportedTransformation)
 	}
+
 	return err
 }
 
@@ -72,31 +68,30 @@ func mapToDestination(currentLevel string, src, dst interface{}, srcDescription 
 		field := dstValue.Field(i)
 		fieldName := dstValue.Type().Field(i).Name
 		fullPathName := appendFieldName(currentLevel, fieldName)
-		switch field.Kind() {
-		case reflect.Struct:
-			if srcValue.FieldByName(fieldName).IsValid() {
-				mapToDestination(fullPathName, srcValue.FieldByName(fieldName), field, srcDescription)
-			}
-		case reflect.Ptr:
-			if srcDescription[fullPathName] != nil && field.CanSet() {
-				srcFieldValue := srcValue.FieldByName(fieldName)
-				field.Set(reflect.New(reflect.TypeOf(field.Interface()).Elem()))
-				if reflect.Indirect(field).Type() == reflect.Indirect(srcFieldValue).Type() {
-					field.Elem().Set(reflect.Indirect(srcFieldValue))
-				} else if reflect.Indirect(srcFieldValue).Type().ConvertibleTo(reflect.Indirect(field).Type()) {
-					field.Elem().Set(reflect.Indirect(srcFieldValue).Convert(reflect.Indirect(field).Type()))
+		srcFieldValue := srcValue.FieldByName(fieldName)
+		if srcFieldValue.IsValid() && field.CanSet() {
+			switch field.Kind() {
+			case reflect.Struct:
+				mapToDestination(fullPathName, srcFieldValue, field, srcDescription)
+			case reflect.Ptr:
+				if srcDescription[fullPathName] != nil {
+					field.Set(reflect.New(reflect.TypeOf(field.Interface()).Elem()))
+					setValueOfDst(field.Elem(), srcFieldValue)
 				}
-			}
-		default:
-			if srcDescription[fullPathName] != nil && field.CanSet() {
-				srcFieldValue := srcValue.FieldByName(fieldName)
-				if field.Type() == reflect.Indirect(srcFieldValue).Type() {
-					field.Set(reflect.Indirect(srcFieldValue))
-				} else if reflect.Indirect(srcFieldValue).Type().ConvertibleTo(reflect.Indirect(field).Type()) {
-					field.Set(reflect.Indirect(srcFieldValue).Convert(reflect.Indirect(field).Type()))
+			default:
+				if srcDescription[fullPathName] != nil {
+					setValueOfDst(field, srcFieldValue)
 				}
 			}
 		}
+	}
+}
+
+func setValueOfDst(dst, src reflect.Value) {
+	if dst.Type() == reflect.Indirect(src).Type() {
+		dst.Set(reflect.Indirect(src))
+	} else if reflect.Indirect(src).Type().ConvertibleTo(reflect.Indirect(dst).Type()) {
+		dst.Set(reflect.Indirect(src).Convert(reflect.Indirect(dst).Type()))
 	}
 }
 
