@@ -32,11 +32,7 @@ func Transform(src, dst interface{}) (err error) {
 			srcDescription := describeStructure(src)
 			mapToDestination("", src, dst, srcDescription)
 		default:
-			if valueOfDst.Type() == reflect.Indirect(valueOfSrc).Type() {
-				valueOfDst.Set(reflect.Indirect(valueOfSrc))
-			} else if reflect.Indirect(valueOfSrc).Type().ConvertibleTo(reflect.Indirect(valueOfDst).Type()) {
-				valueOfDst.Set(reflect.Indirect(valueOfSrc).Convert(reflect.Indirect(valueOfDst).Type()))
-			}
+			setValueOfDst(valueOfDst, valueOfSrc)
 		}
 	} else {
 		err = errors.New(unsupportedTransformation)
