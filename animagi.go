@@ -21,9 +21,10 @@ dst must be settable or an error will be returned
 */
 func Transform(src, dst interface{}) (err error) {
 
-	if reflect.ValueOf(dst).Kind() != reflect.Ptr || !reflect.ValueOf(dst).Elem().CanSet() {
+	if cannotModifyField(dst) {
 		return errors.New(dstError)
 	}
+
 	valueOfSrc := findValueOf(src)
 	valueOfDst := findValueOf(dst)
 	if valueOfSrc.Kind() == valueOfDst.Kind() {
@@ -111,4 +112,8 @@ func appendFieldName(prefix, fieldName string) (fullName string) {
 		fullName = fieldName
 	}
 	return fullName
+}
+
+func cannotModifyField(field interface{}) bool {
+	return reflect.ValueOf(field).Kind() != reflect.Ptr || !reflect.ValueOf(field).Elem().CanSet()
 }
