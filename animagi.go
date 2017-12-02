@@ -27,6 +27,7 @@ func Transform(src, dst interface{}) (err error) {
 
 	valueOfSrc := findValueOf(src)
 	valueOfDst := findValueOf(dst)
+
 	if valueOfSrc.Kind() == valueOfDst.Kind() {
 		switch valueOfDst.Kind() {
 		case reflect.Struct:
@@ -65,11 +66,13 @@ func describeStructure(structure interface{}) map[string]reflect.Type {
 func mapToDestination(currentLevel string, src, dst interface{}, srcDescription map[string]reflect.Type) {
 	srcValue := findValueOf(src)
 	dstValue := findValueOf(dst)
+
 	for i := 0; i < dstValue.NumField(); i++ {
 		field := dstValue.Field(i)
 		fieldName := dstValue.Type().Field(i).Name
 		fullPathName := appendFieldName(currentLevel, fieldName)
 		srcFieldValue := srcValue.FieldByName(fieldName)
+
 		if srcFieldValue.IsValid() && field.CanSet() {
 			switch field.Kind() {
 			case reflect.Struct:
