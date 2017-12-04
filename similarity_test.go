@@ -12,7 +12,7 @@ var _ = Describe("Animagi", func() {
 	mlFactor := 5
 	lFactor := 1
 
-	FContext("single depth strings", func() {
+	Context("single depth strings", func() {
 		It("Should handle 1st param as empty strings", func() {
 			rank := animagi.SimilarityRank("", "hello")
 			Expect(rank).To(BeNumerically("==", mlFactor*5))
@@ -54,5 +54,26 @@ var _ = Describe("Animagi", func() {
 			rank := animagi.SimilarityRank("th3s3ar3wr0ng", "thesearewrong31")
 			Expect(rank).To(BeNumerically("==", lFactor*4+mlFactor*2))
 		})
+	})
+
+	FContext("Invalid strings", func() {
+		It("Should return MaxRank for '.'", func() {
+			rank := animagi.SimilarityRank(".", "valid")
+			Expect(rank).To(BeNumerically("==", animagi.MaxRank))
+		})
+
+		It("Should return MaxRank for ' '", func() {
+			rank := animagi.SimilarityRank(" ", "valid")
+			Expect(rank).To(BeNumerically("==", animagi.MaxRank))
+		})
+
+		It("Should return MaxRank for consecutive '.'", func() {
+			rank := animagi.SimilarityRank("something..invalid", "valid")
+			Expect(rank).To(BeNumerically("==", animagi.MaxRank))
+		})
+	})
+
+	Context("Strings of same depth", func() {
+
 	})
 })
