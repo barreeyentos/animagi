@@ -21,7 +21,7 @@ const (
 SimilarityRank computes the similarity between two strings
 Some presumptions of the strings are to be considered:
  - a '.' denotes a depth increase
- - a string consistenting of only '.' will have maximum RANK
+ - a string consistenting of only '.' will have MaximumRank
  - a letter is considered missing if one string is longer than the other
 */
 func SimilarityRank(str1, str2 string) (rank uint) {

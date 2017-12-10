@@ -10,6 +10,11 @@ const (
 	unsupportedTransformation = "could not transform to dst"
 )
 
+type typeDescription struct {
+	FieldType  reflect.Type
+	FieldValue reflect.Value
+}
+
 /*
 Transform will map the data from src into
 dst by calculating the fields most similar
@@ -32,7 +37,7 @@ func Transform(src, dst interface{}) (err error) {
 		switch valueOfDst.Kind() {
 		case reflect.Struct:
 			srcDescription := describeStructure(src)
-			mapToDestination("", src, dst, srcDescription)
+			mapToDestination("", dst, srcDescription)
 		default:
 			setValueOfDst(valueOfDst, valueOfSrc)
 		}
@@ -43,8 +48,8 @@ func Transform(src, dst interface{}) (err error) {
 	return err
 }
 
-func describeStructure(structure interface{}) map[string]reflect.Type {
-	structureDescription := make(map[string]reflect.Type)
+func describeStructure(structure interface{}) map[string]typeDescription {
+	structureDescription := make(map[string]typeDescription)
 	structureValue := findValueOf(structure)
 
 	for i := 0; i < structureValue.NumField(); i++ {
@@ -57,34 +62,32 @@ func describeStructure(structure interface{}) map[string]reflect.Type {
 				structureDescription[fieldName+"."+k] = v
 			}
 		default:
-			structureDescription[fieldName] = field.Type()
+			structureDescription[fieldName] = typeDescription{field.Type(), findValueOf(field)}
 		}
 	}
 	return structureDescription
 }
 
-func mapToDestination(currentLevel string, src, dst interface{}, srcDescription map[string]reflect.Type) {
-	srcValue := findValueOf(src)
+func mapToDestination(currentLevel string, dst interface{}, srcDescription map[string]typeDescription) {
 	dstValue := findValueOf(dst)
 
 	for i := 0; i < dstValue.NumField(); i++ {
 		field := dstValue.Field(i)
 		fieldName := dstValue.Type().Field(i).Name
 		fullPathName := appendFieldName(currentLevel, fieldName)
-		srcFieldValue := srcValue.FieldByName(fieldName)
 
-		if srcFieldValue.IsValid() && field.CanSet() {
+		if field.IsValid() && field.CanSet() {
 			switch field.Kind() {
 			case reflect.Struct:
-				mapToDestination(fullPathName, srcFieldValue, field, srcDescription)
+				mapToDestination(fullPathName, field, srcDescription)
 			case reflect.Ptr:
-				if srcDescription[fullPathName] != nil {
+				if val, found := srcDescription[fullPathName]; found {
 					field.Set(reflect.New(reflect.TypeOf(field.Interface()).Elem()))
-					setValueOfDst(field.Elem(), srcFieldValue)
+					setValueOfDst(field.Elem(), val.FieldValue)
 				}
 			default:
-				if srcDescription[fullPathName] != nil {
-					setValueOfDst(field, srcFieldValue)
+				if val, found := srcDescription[fullPathName]; found {
+					setValueOfDst(field, val.FieldValue)
 				}
 			}
 		}
