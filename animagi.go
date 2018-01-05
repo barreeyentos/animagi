@@ -81,17 +81,22 @@ func mapToDestination(currentLevel string, dst interface{}, srcDescription map[s
 			case reflect.Struct:
 				mapToDestination(fullPathName, field, srcDescription)
 			case reflect.Ptr:
-				if val, found := srcDescription[fullPathName]; found {
+				if val, found := findMostSimlilarSource(fullPathName, srcDescription); found {
 					field.Set(reflect.New(reflect.TypeOf(field.Interface()).Elem()))
 					setValueOfDst(field.Elem(), val.FieldValue)
 				}
 			default:
-				if val, found := srcDescription[fullPathName]; found {
+				if val, found := findMostSimlilarSource(fullPathName, srcDescription); found {
 					setValueOfDst(field, val.FieldValue)
 				}
 			}
 		}
 	}
+}
+
+func findMostSimlilarSource(fullPathName string, srcDescription map[string]typeDescription) (typeDescription, bool) {
+	val, ok := srcDescription[fullPathName]
+	return val, ok
 }
 
 func setValueOfDst(dst, src reflect.Value) {
